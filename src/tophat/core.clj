@@ -160,6 +160,7 @@
 (def valid-status-m (reduce (fn [a x] (assoc a x x)) nil valid-statuses))
 
 (defn valid?
+  "Determine if status s is valid status code."
   [s]
   (contains? valid-status-m s))
 
@@ -193,8 +194,15 @@
                    insufficient-storage-status "Insufficient Storage" loop-detected-status "Loop Detected"
                    not-extended-status "Not Extended" network-authentication-required-status "Network Authentication Required"})
 
-(defn get-status-code [c] (get reverse-status c internal-server-error-status))
-(defn get-status-code-text [c] (get status-texts (get-status-code c)))
+(defn get-status-code
+  "Returns status numeric code given keyword status key c."
+  [c]
+  (get reverse-status c internal-server-error-status))
+
+(defn get-status-code-text
+  "Returns statue text given a keyword status key c."
+  [c]
+  (get status-texts (get-status-code c)))
 
 (defn status-text
   "Returns the status text for given HTTP status x."
@@ -260,9 +268,6 @@
      :params params}))
 
 ;; mime types
-
-;; todo : refactor to add capability to handle adding new mimetypes
-
 (def mimetype-edn "application/edn")
 (def mimetype-html "text/html")
 (def mimetype-json "application/json")
@@ -359,10 +364,12 @@
   (<-header req "user-agent" :user-agent))
 
 (defn ->json-str
+  "Generate a JSON string from map m."
   [m]
   (json/generate-string m))
 
 (defn ->json-input-stream
+  "Convert map m to JSON string stream."
   [m]
   (->input-stream (->json-str m)))
 
@@ -432,32 +439,6 @@
     (assoc r :body (.toString out))))
 
 ;; responses ===============================================================
-
-(defn clojurize-str
-  [s]
-  (-> s str/lower-case (str/replace #"\s" "-")))
-
-(def response-s
-  "(defn $fn
-  \"Generate HTTP response document with status $status.\"
-  ([b] ($fn nil b))
-  ([h b] (response $fn-status h b)))")
-
-(defn gen-response-fn
-  [f]
-  (-> response-s
-      (str/replace #"\$fn" (clojurize-str f))
-      (str/replace #"\$status" (str/upper-case f))))
-
-(defn gen-http-response-fns
-  []
-  (reduce (fn [a v]
-            (let [sfn (gen-response-fn v)]
-              (println sfn)
-              (println)
-              (conj (or a []) sfn)))
-          nil
-          (sort (vals status-texts))))
 
 (defn response
   "Generate HTTP response document."
@@ -786,21 +767,6 @@
 (def status-of-s
   "(defn $fn? \"Determines if HTTP response document d has $status status.\" [d] (status-of? d $fn-status))")
 
-(defn gen-status-of-fn
-  [f]
-  (-> status-of-s
-      (str/replace #"\$fn" (clojurize-str f))
-      (str/replace #"\$status" (str/upper-case f))))
-
-(defn gen-status-of-fns
-  []
-  (reduce (fn [a v]
-            (let [sfn (gen-status-of-fn v)]
-              (println sfn)
-              (conj (or a []) sfn)))
-          nil
-          (sort (vals status-texts))))
-
 (defn status-of?
   "Determines if HTTP response document d "
   [d v]
@@ -868,6 +834,11 @@
 (defn variant-also-negotiates? "Determines if HTTP response document d has VARIANT ALSO NEGOTIATES status." [d] (status-of? d variant-also-negotiates-status))
 
 (defn not-ok? "Determine if HTTP response document d is not OK status." [d] (not (ok? d)))
+
+(defn <-status
+  "Extracts status from document d."
+  [d & [s]]
+  (get d :status s))
 
 ;; body
 
