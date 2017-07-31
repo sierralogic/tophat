@@ -136,8 +136,45 @@ xml-accept ;; {:headers {"accept" "application/xml"}}
 ;; {:status 404, :body "{id: 123, message: Item 123 not found.}\n", :headers {"Content-Type" "text/yaml"}}
 ```
 
-### Processing response documents from internal functions
- 
+### Handling Macros
+
+`if-let-ok` macro:
+
+```clojure
+(if-let-ok [r (ok "ok body")]
+           (<-body r)
+           :should-not-get-here)
+;; "ok body"
+
+(if-let-ok [r (not-found {:id 123 :msg "Item 123 not found."})]
+           :should-not-get-here
+           (<-body r))
+;; {:id 123, :msg "Item 123 not found."}
+
+```
+`when-let-ok` macro:
+
+```clojure
+(when-let-ok [r (ok "ok body")]
+             (<-body r))
+;; "ok body"
+
+(when-let-ok [r (not-found {:id 123 :msg "Item 123 not found."})]
+             :should-not-get-here)
+;; nil
+```
+
+`when-let-not-ok` macro:
+
+```clojure
+(when-let-not-ok [r (ok "ok body")]
+                 :should-not-get-here)
+;; nil
+
+(when-let-not-ok [r (not-found {:id 123 :msg "Item 123 not found."})]
+                 (<-body r))
+;; {:id 123, :msg "Item 123 not found."}
+```
 
 ## License
 
