@@ -136,7 +136,7 @@ xml-accept ;; {:headers {"accept" "application/xml"}}
 ;; {:status 404, :body "{id: 123, message: Item 123 not found.}\n", :headers {"Content-Type" "text/yaml"}}
 ```
 
-Ring handlers may (and have) been developed to automatically convert responses to the accepted format
+Ring handlers have been developed to automatically convert responses to the accepted format
 designated in the original request.
 
 ### Handling Macros
