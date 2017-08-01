@@ -45,9 +45,67 @@ Creating response documents is easy.
 Create response document with headers:
 
 ```clojure
-(ok {"Pragma" "no-cache"} "this is ok body") ;; {:status 200, :body "this is ok body", :headers {"Pragma" "no-cache"}} 
+;; (response $body) or (response $header-map $body)
+;; (ok $body) or (ok $header-map $body)
+
+(ok {"Pragma" "no-cache"} "this is ok body") 
+;; {:status 200, :body "this is ok body", :headers {"Pragma" "no-cache"}} 
+
+(ok (pragma "no-cache") "this is ok body") 
+;; {:status 200, :body "this is ok body", :headers {"Pragma" "no-cache"}} 
+
+(ok (->> (content :text) (pragma "no-cache")) "this is ok body") 
+;; {:status 200, :body "this is ok body", :headers {"Content-Type" "text/plain" "Pragma" "no-cache"}} 
+
 ```
 
+### Creating request documents
+
+```clojure
+
+;; (request $body) or (request $header-map $body)
+
+(request "meh")
+;; {:body "meh"}
+
+(request (->> (content :json) (accept :transit)) "{\"foo\" : \"bar\"}")
+;; {:body "{\"foo\" : \"bar\"}", :headers {"Content-Type" "application/json", "Accept" "application/transit+json"}}
+
+(request {"Content-Type" "application/json" "Accept" "application/transit+json"} "{\"foo\" : \"bar\"}")
+;; {:body "{\"foo\" : \"bar\"}", :headers {"Content-Type" "application/json", "Accept" "application/transit+json"}}
+```
+
+
+### Headers
+Both request and response documents have header fields.
+
+Tophat has a variety of convenience function to help deal with headers.
+
+```clojure
+(accept :text)
+;; {"Accept" "text/plain"}
+
+(content :edn)
+;; {"Content-Type" "application/edn"}
+
+(->> (accept :text) (content :edn))
+;; {"Accept" "text/plain" "Content-Type" "application/edn"}
+
+(headers {"Accept" "text/plain"})
+;; {:headers {"Accept" "text/plain"}}
+
+(headers (accept :text))
+;; {:headers {"Accept" "text/plain"}}
+
+(headers (->> (accept :text) (content :json)))
+;; {:headers {"Accept" "text/plain", "Content-Type" "application/json"}}
+
+(request (->> (accept :text) (content :edn) (pragma "no-cache")) "{:foo :bar}")
+;; {:body "{:foo :bar}", :headers {"Accept" "text/plain", "Content-Type" "application/edn", "Pragma" "no-cache"}}
+
+(ok (->> (content :transit) (pragma "no-cache")) {:foo :bar})
+;; {:status 200, :body {:foo :bar}, :headers {"Content-Type" "application/transit+json", "Pragma" "no-cache"}}
+```
 ### Handling documents
 
 Checking status of documents:
@@ -89,15 +147,17 @@ Retrieving body from documents:
 Transforming request body to Clojure map (via headers/content-type):
 
 ```clojure
-(def edn-request {:headers {"content-type" "application/edn"} :body "{:foo :bar}"}) ;; could have used edn-content as headers value
+(def edn-request (request (content :edn) "{:foo :bar}"))
 (body->map edn-request) 
 ;; {:foo :bar}
 
-(def json-request {:headers json-content} :body "{\"foo\" : \"bar\"}"})
+(def json-request (request (->> (content :json) (accept :transit)) "{\"foo\" : \"bar\"}"))
+json-request
+;; {:body "{\"foo\" : \"bar\"}", :headers {"Content-Type" "application/json", "Accept" "application/transit+json"}}
 (body->map json-request) 
 ;; {:foo "bar"}
 
-(def transit-request {:headers transit-content :body "[\"^ \",\"~:foo\",\"~:bar\"]"})
+(def transit-request {:headers {"Content-Type" "application/transit+json"} :body "[\"^ \",\"~:foo\",\"~:bar\"]"})
 (body->map transit-request) 
 ;; {:foo :bar}
 
@@ -105,7 +165,7 @@ Transforming request body to Clojure map (via headers/content-type):
 (body->map xml-request) 
 ;; {:tag :foo, :attrs nil, :content ["bar"]}
 
-(def yaml-request {:headers yaml-content :body "foo: bar"})
+(def yaml-request (request (content :yaml) "foo: bar"))
 (body->map yaml-request) 
 ;; #ordered/map([:foo "bar"])
 ```
@@ -113,26 +173,27 @@ Transforming request body to Clojure map (via headers/content-type):
 Transforming response body to accepted formatted string:
 
 ```clojure
-xml-accept ;; {:headers {"accept" "application/xml"}}
 
-(body->text edn-accept (not-found {:id 123 :message "Item 123 not found."})) 
+;; (body->text $request-document $response-document)
+
+(body->text {:headers {"Accept" "application/edn"}} (not-found {:id 123 :message "Item 123 not found."})) 
 ;; {:status 404, :body "{:id 123, :message \"Item 123 not found.\"}\n", :headers {"Content-Type" "application/edn"}}
 
-(body->text json-accept (not-found {:id 123 :message "Item 123 not found."})) 
+(body->text (headers (accept :json)) (not-found {:id 123 :message "Item 123 not found."}))
 ;; {:status 404, :body "{\"id\":123,\"message\":\"Item 123 not found.\"}", :headers {"Content-Type" "application/json"}}
 
-(body->text transit-accept (not-found {:id 123 :message "Item 123 not found."}))
+(body->text (request (accept :transit) nil) (not-found {:id 123 :message "Item 123 not found."}))
 ;; {:status 404,
 ;;  :body "[\"^ \",\"~:id\",123,\"~:message\",\"Item 123 not found.\"]",
 ;;  :headers {"Content-Type" "application/transit+json"}}
 
 ; note: xml handling is not pretty or elegant but supported by tophat
-(body->text xml-accept (not-found {:tag :foo, :attrs nil, :content ["bar"]}))
+(body->text (headers (accept :xml)) (not-found {:tag :foo, :attrs nil, :content ["bar"]}))
 ;; {:status 404,
 ;;  :body "<?xml version='1.0' encoding='UTF-8'?>\n<foo>\nbar\n</foo>\n",
 ;;  :headers {"Content-Type" "application/xml"}}
 
-(body->text yaml-accept (not-found {:id 123 :message "Item 123 not found."}))
+(body->text (headers (accept :yaml)) (not-found {:id 123 :message "Item 123 not found."}))
 ;; {:status 404, :body "{id: 123, message: Item 123 not found.}\n", :headers {"Content-Type" "text/yaml"}}
 ```
 
