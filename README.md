@@ -7,9 +7,9 @@ Tophat is a Clojure library for handling HTTP request and response documents/map
 Tophat began as a utility library that was passed between projects to handle
 HTTP request and response documents.
 
-As the library evolved, the HTTP response maps (aka Ring maps) were being used
-more and more as results from function calls to handle exception handling
-so it made sense to break out Tophat into a top-level library/project. 
+As the library evolved, the request/response maps (aka Ring maps) were not only being used
+to handle HTTP-based handling, but also by function for results that can be processed
+based on statuses.
 
 ## Usage
 
@@ -197,10 +197,63 @@ Transforming response body to accepted formatted string:
 ;; {:status 404, :body "{id: 123, message: Item 123 not found.}\n", :headers {"Content-Type" "text/yaml"}}
 ```
 
-Ring handlers have been developed to automatically convert responses to the accepted format
+Ring handlers may also be developed to automatically convert responses to the accepted format
 designated in the original request.
 
-### Handling Macros
+Wrappers:
+```clojure
+(def file-regex #".*File")
+(def stream-regex #".*InputStream")
+(def http-input-regex #".*HttpInputOverHTTP")
+
+(defn file-or-stream?
+  [x]
+  (when (some? x)
+    (when-let [clss (str (class x))]
+      (let [r? (or (re-find http-input-regex clss)
+                   (re-find file-regex clss)
+                   (re-find stream-regex clss))]
+        r?))))
+        
+(defn wrap-response-body-using-accept-header
+  "Converts the response body to the format in the request Accept: header."
+  [handler & [_]]
+  (fn [request]
+    (let [response (handler request)
+          fos? (file-or-stream? (get response :body))]
+      (if fos?
+        response
+        (body->text request response)))))
+
+(defn wrap-request-body-using-content-type-header
+  "Converts the incoming request body to Clojure map given the request Content-Type: header."
+  [handler & [_]]
+  (fn [req]
+    (handler (if (= (get req :request-method) :post)
+               (try
+                 (if (file-or-stream? (get req :body))
+                   req
+                   (assoc req :body (body->map req)))
+                 (catch Exception e
+                   req))
+               req))))
+```
+
+Add to middleware handler:
+```clojure
+;; NOTE : the handlers are in REVERSE ORDER, meaning the wrapper functions are done from the bottom up...
+
+(defn wrap-middleware [handler]
+  (-> handler
+      wrap-response-body-using-accept-header ;; transforms response clj map body to req accept format
+      wrap-request-body-using-content-type-header ;; converts request body to clj map
+      wrap-defaults
+      wrap-exceptions
+      wrap-reload))
+
+```
+
+### Let Macros
 
 `if-let-ok` macro:
 
