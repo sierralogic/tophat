@@ -30,6 +30,8 @@ In code:
 
 ## Examples
 
+**NOTE**: Examples require tophat v0.1.3 and later.
+
 ```clojure
 (require 'tophat.core)
 ```
