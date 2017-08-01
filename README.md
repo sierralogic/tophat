@@ -2,6 +2,8 @@
 
 Tophat is a Clojure library for handling HTTP request and response documents/maps.
 
+Tophat API documentation may be found <a href="https://sierralogic.github.io/tophat/doc/tophat.core.html" target="_blank">here</a>.
+
 ## Rationale
 
 Tophat began as a utility library that was passed between projects to handle
