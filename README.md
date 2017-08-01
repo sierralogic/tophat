@@ -75,7 +75,6 @@ Create response document with headers:
 ;; {:body "{\"foo\" : \"bar\"}", :headers {"Content-Type" "application/json", "Accept" "application/transit+json"}}
 ```
 
-
 ### Headers
 Both request and response documents have header fields.
 
@@ -197,6 +196,7 @@ Transforming response body to accepted formatted string:
 (body->text (headers (accept :yaml)) (not-found {:id 123 :message "Item 123 not found."}))
 ;; {:status 404, :body "{id: 123, message: Item 123 not found.}\n", :headers {"Content-Type" "text/yaml"}}
 ```
+### Middleware
 
 Ring handlers may also be developed to automatically convert responses to the accepted format
 designated in the original request.
