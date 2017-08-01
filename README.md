@@ -45,8 +45,17 @@ Creating response documents is easy.
 Create response document with headers:
 
 ```clojure
-;; (response $body) or (response $header-map $body)
+;; (response $body) (response $status $body) or (response $status $header-map $body)
 ;; (ok $body) or (ok $header-map $body)
+
+(response {:foo :bar})
+;; {:status 200, :body {:foo :bar}}
+
+(response not-found-status {:msg "not found..."})
+;; {:status 404, :body {:msg "not found..."}}
+
+(response created-status {"Content-Type" "text/plain"} "entity created")
+;; {:status 201, :body "entity created", :headers {"Content-Type" "text/plain"}}
 
 (ok {"Pragma" "no-cache"} "this is ok body") 
 ;; {:status 200, :body "this is ok body", :headers {"Pragma" "no-cache"}} 
@@ -57,6 +66,8 @@ Create response document with headers:
 (ok (->> (content :text) (pragma "no-cache")) "this is ok body") 
 ;; {:status 200, :body "this is ok body", :headers {"Content-Type" "text/plain" "Pragma" "no-cache"}} 
 
+(created (content :text) "entity created...")
+;; {:status 201, :body "entity created...", :headers {"Content-Type" "text/plain"}}
 ```
 
 ### Creating request documents
@@ -76,6 +87,7 @@ Create response document with headers:
 ```
 
 ### Headers
+
 Both request and response documents have header fields.
 
 Tophat has a variety of convenience function to help deal with headers.
