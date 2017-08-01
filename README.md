@@ -158,10 +158,11 @@ json-request
 ;; {:foo "bar"}
 
 (def transit-request {:headers {"Content-Type" "application/transit+json"} :body "[\"^ \",\"~:foo\",\"~:bar\"]"})
+;; could have used (content :transit) instead of explicit headers map value {}
 (body->map transit-request) 
 ;; {:foo :bar}
 
-(def xml-request {:headers xml-content :body "<?xml version=\"1.0\" encoding=\"UTF-8\"?><foo>bar</foo>"})
+(def xml-request {:headers (content :xml) :body "<?xml version=\"1.0\" encoding=\"UTF-8\"?><foo>bar</foo>"})
 (body->map xml-request) 
 ;; {:tag :foo, :attrs nil, :content ["bar"]}
 
