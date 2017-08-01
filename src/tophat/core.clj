@@ -277,6 +277,16 @@
 (def mimetype-xml "application/xml")
 (def mimetype-yaml "text/yaml")
 
+(def supported-mimetypes {:edn mimetype-edn
+                          :html mimetype-html
+                          :htm mimetype-html
+                          :json mimetype-json
+                          :text mimetype-text
+                          :string mimetype-text
+                          :transit mimetype-transit-json
+                          :xml mimetype-xml
+                          :yaml mimetype-yaml})
+
 (def pre-ct "(^|;)")
 (def post-ct "($|;)")
 
@@ -290,66 +300,251 @@
 
 ;; header / content types
 
-(def accept-key "accept")
-(def content-type-key "Content-Type")
+;; header fields
 
-(def edn-content {content-type-key mimetype-edn})
-(def html-content {content-type-key mimetype-html})
-(def json-content {content-type-key mimetype-json})
-(def text-content {content-type-key mimetype-text})
-(def transit-content {content-type-key mimetype-transit-json})
-(def xml-content {content-type-key mimetype-xml})
-(def yaml-content {content-type-key mimetype-yaml})
+(def header-accept "Accept")
+(def header-accept-charset "Accept-Charset")
+(def header-accept-encoding "Accept-Encoding")
+(def header-accept-language "Accept-Language")
+(def header-accept-datetime "Accept-Datetime")
+(def header-access-control-request-method "Accept-Control-Request-Method")
+(def header-access-control-request-headers "Accept-Control-Request-Headers")
+(def header-authorization "Authorization")
+(def header-cache-control "Cache-Control")
+(def header-connection "Connection")
+(def header-cookie "Cookie")
+(def header-content-length "Content-Length")
+(def header-content-md5 "Content-MD5")
+(def header-content-type "Content-Type")
+(def header-date "Date")
+(def header-expect "Expect")
+(def header-forwarded "Forwarded")
+(def header-from "From")
+(def header-host "Host")
+(def header-if-match "If-Match")
+(def header-if-modified-since "If-Modified-Since")
+(def header-if-none-match "If-None-Match")
+(def header-if-range "If-Range")
+(def header-if-unmodified-since "If-Unmodified-Since")
+(def header-max-forwards "Max-Forwards")
+(def header-origin "Origin")
+(def header-pragma "Pragma")
+(def header-proxy-authorization "Proxy-Authorization")
+(def header-range "Range")
+(def header-referer "Referer")
+(def header-te "TE")
+(def header-user-agent "User-Agent")
+(def header-upgrade "Upgrade")
+(def header-via "Via")
+(def header-warning "Warning")
 
-(def edn-accept {:headers {accept-key mimetype-edn}})
-(def html-accept {:headers {accept-key mimetype-html}})
-(def json-accept {:headers {accept-key mimetype-json}})
-(def text-accept {:headers {accept-key mimetype-text}})
-(def transit-accept {:headers {accept-key mimetype-transit-json}})
-(def xml-accept {:headers {accept-key mimetype-xml}})
-(def yaml-accept {:headers {accept-key mimetype-yaml}})
+;; response header fields
+(def header-access-control-access-origin "Access-Control-Allow-Origin")
+(def header-access-control-allow-credentials "Access-Control-Allow-Credentials")
+(def header-access-control-expose-headers "Access-Control-Expose-Headers")
+(def header-access-control-max-age "Access-Control-Max-Age")
+(def header-access-control-allow-methods "Access-Control-Allow-Methods")
+(def header-access-control-allow-headers "Access-Control-Allow-Headers")
+(def header-accept-patch "Accept-Patch")
+(def header-accept-ranges "Accept-Ranges")
+(def header-age "Age")
+(def header-allow "Allow")
+(def header-alt-svc "Alt-Svc")
+(def header-cache-control "Cache-Control")
+(def header-connection "Connection")
+(def header-content-disposition "Content-Disposition")
+(def header-content-encoding "Content-Encoding")
+(def header-content-language "Content-Language")
+(def header-content-length "Content-Length")
+(def header-content-location "Content-Location")
+(def header-content-md5 "Content-MD5")
+(def header-content-range "Content-Range")
+(def header-date "Date")
+(def header-etag "ETag")
+(def header-expires "Expires")
+(def header-last-modified "Last-Modified")
+(def header-link "Link")
+(def header-location "Location")
+(def header-p3p "P3P")
+(def header-proxy-authenticate "Proxy-Authenticate")
+(def header-public-key-pins "Public-Key-Pins")
+(def header-retry-after "Retry-After")
+(def header-server "Server")
+(def header-set-cookie "Set-Cookie")
+(def header-strict-transport-security "Strict-Transport-Security")
+(def header-trailer "Trailer")
+(def header-transfer-encoding "Transfer-Encoding")
+(def header-tk "Tk")
+(def header-upgrade "Upgrade")
+(def header-vary "Vary")
+(def header-via "Via")
+(def header-warning "Warning")
+(def header-www-authenticate "WWW-Authenticate")
+
+;; non-standard http header fields
+(def header-dnt "DNT")
+(def header-refresh "Refresh")
+(def header-status "Status")
+(def header-powered-by "X-Powered-By")
+(def header-request-id "X-Request-ID")
+(def header-xss-protection "X-XSS-Protection")
+
+;; ring request header fields
+(def ring-req-accept "accept")
+(def ring-req-accept-charset "accept-charset")
+(def ring-req-accept-encoding "accept-encoding")
+(def ring-req-accept-language "accept-language")
+(def ring-req-accept-datetime "accept-datetime")
+(def ring-req-access-control-request-method "accept-control-request-method")
+(def ring-req-authorization "authorization")
+(def ring-req-cache-control "cache-control")
+(def ring-req-connection "connection")
+(def ring-req-cookie "cookie")
+(def ring-req-content-length "content-length")
+(def ring-req-content-md5 "content-md5")
+(def ring-req-content-type "content-type")
+(def ring-req-date "date")
+(def ring-req-expect "expect")
+(def ring-req-forwarded "forwarded")
+(def ring-req-from "from")
+(def ring-req-host "host")
+(def ring-req-if-match "if-match")
+(def ring-req-if-modified-since "if-modified-since")
+(def ring-req-if-none-match "if-none-match")
+(def ring-req-if-range "if-range")
+(def ring-req-if-unmodified-since "if-unmodified-since")
+(def ring-req-max-forwards "max-forwards")
+(def ring-req-origin "origin")
+(def ring-req-pragma "pragma")
+(def ring-req-proxy-authorization "proxy-authorization")
+(def ring-req-range "range")
+(def ring-req-referer "referer")
+(def ring-req-te "te")
+(def ring-req-user-agent "user-agent")
+(def ring-req-upgrade "upgrade")
+(def ring-req-via "via")
+(def ring-req-warning "warning")
+(def ring-req-dnt "dnt")
+
+;; ------------------------------------------------
+(def edn-content {header-content-type mimetype-edn})
+(def html-content {header-content-type mimetype-html})
+(def json-content {header-content-type mimetype-json})
+(def text-content {header-content-type mimetype-text})
+(def transit-content {header-content-type mimetype-transit-json})
+(def xml-content {header-content-type mimetype-xml})
+(def yaml-content {header-content-type mimetype-yaml})
+
+(def edn-accept {:headers {header-accept mimetype-edn}})
+(def html-accept {:headers {header-accept mimetype-html}})
+(def json-accept {:headers {header-accept mimetype-json}})
+(def text-accept {:headers {header-accept mimetype-text}})
+(def transit-accept {:headers {header-accept mimetype-transit-json}})
+(def xml-accept {:headers {header-accept mimetype-xml}})
+(def yaml-accept {:headers {header-accept mimetype-yaml}})
+
+;; header funcs
+(defn headers
+  [m]
+  {:headers m})
 
 (defn <-header
-  "Extracts header value from request and returns the first non-nil values from
+  "Extracts header value from request or response and returns the first non-nil values from
   the headers for header fields hs."
-  [req & hs]
-  (when-let [rhs (get req :headers)]
+  [rr & hs]
+  (when-let [rhs (get rr :headers)]
     (reduce (fn [_ h]
               (when-let [v (get rhs h)]
                 (reduced v)))
             nil
             hs)))
 
-(defn <-content-type
-  "Extracts content type from the header of the HTTP request req."
-  [req]
-  (<-header req "content-type" :content-type "Content Type" "Content-Type"))
+(defn <-header-field
+  [rr h]
+  (let [lh (str/lower-case h)]
+  (<-header rr h lh (keyword lh))))
 
-(defn content?
-  "Determines if content type of HTTP request document req matches content regex rgx."
-  [req rgx]
-  (when (and req rgx)
-    (when-let [ct (<-content-type req)]
-      (re-find rgx ct))))
+;; extract header fields from req/res
+(defn <-accept [r] (or (<-header-field r header-accept) ""))
+(defn <-accept-charset [r] (<-header-field r header-accept-charset))
+(defn <-accept-encoding [r] (<-header-field r header-accept-encoding))
+(defn <-accept-language [r] (<-header-field r header-accept-language))
+(defn <-accept-datetime [r] (<-header-field r header-accept-datetime))
+(defn <-accept-control-request-method [r] (<-header-field r header-access-control-request-method))
+(defn <-authorization [r] (<-header-field r header-authorization))
+(defn <-cache-control [r] (<-header-field r header-cache-control))
+(defn <-connection [r] (<-header-field r header-connection))
+(defn <-content-length [r] (<-header-field r header-content-length))
+(defn <-content-md5 [r] (<-header-field r header-content-md5))
+(defn <-content-type [r] (<-header-field r header-content-type))
+(defn <-cookie [r] (<-header-field r header-cookie))
+(defn <-date [r] (<-header-field r header-date))
+(defn <-expect [r] (<-header-field r header-expect))
+(defn <-forwarded [r] (<-header-field r header-forwarded))
+(defn <-from [r] (<-header-field r header-from))
+(defn <-host [r] (<-header-field r header-host))
+(defn <-if-match [r] (<-header-field r header-if-match))
+(defn <-if-modified-since [r] (<-header-field r header-if-modified-since))
+(defn <-if-none-match [r] (<-header-field r header-if-none-match))
+(defn <-if-range [r] (<-header-field r header-if-range))
+(defn <-if-unmodified-since [r] (<-header-field r header-if-unmodified-since))
+(defn <-max-forwards [r] (<-header-field r header-max-forwards))
+(defn <-origin [r] (<-header-field r header-origin))
+(defn <-pragma [r] (<-header-field r header-pragma))
+(defn <-proxy-authorization [r] (<-header-field r header-proxy-authorization))
+(defn <-range [r] (<-header-field r header-range))
+(defn <-referer [r] (<-header-field r header-referer))
+(defn <-te [r] (<-header-field r header-te))
+(defn <-user-agent [r] (<-header-field r header-user-agent))
+(defn <-dnt [r] (<-header-field r header-dnt))
 
-(defn edn-content? "Determines if content type of HTTP request req is EDN." [req] (content? req mt-edn-regex))
-(defn json-content? "Determines if content type of HTTP request req is JSON." [req] (content? req mt-json-regex))
-(defn transit-content? "Determines if content type of HTTP request req is Transit." [req] (content? req mt-transit-regex))
-(defn xml-content? "Determines if content type of HTTP request req is XML." [req] (content? req mt-xml-regex))
-(defn yaml-content? "Determines if content type of HTTP request req is YAML." [req] (content? req mt-yaml-regex))
-
-;; header / accept
-
-(defn <-accept
-  "Extracts Accept content from HTTP request req headers."
-  [req]
-  (or (<-header req accept-key :accept :accepts "accepts" "Accept" "Accepts") ""))
+(defn <-access-control-access-origin [r] (<-header-field r header-access-control-access-origin))
+(defn <-access-control-allow-credentials [r] (<-header-field r header-access-control-allow-credentials))
+(defn <-access-control-expose-headers [r] (<-header-field r header-access-control-expose-headers))
+(defn <-access-control-max-age [r] (<-header-field r header-access-control-max-age))
+(defn <-access-control-allow-methods [r] (<-header-field r header-access-control-allow-methods))
+(defn <-acccess-control-allow-headers [r] (<-header-field r header-access-control-allow-headers))
+(defn <-accept-patch [r] (<-header-field r header-accept-patch))
+(defn <-accept-ranges [r] (<-header-field r header-accept-ranges))
+(defn <-age [r] (<-header-field r header-age))
+(defn <-allow [r] (<-header-field r header-allow))
+(defn <-alt-svc [r] (<-header-field r header-alt-svc))
+(defn <-content-disposition [r] (<-header-field r header-content-disposition))
+(defn <-content-encoding [r] (<-header-field r header-content-encoding))
+(defn <-content-language [r] (<-header-field r header-content-language))
+(defn <-content-length [r] (<-header-field r header-content-length))
+(defn <-content-location [r] (<-header-field r header-content-location))
+(defn <-content-range [r] (<-header-field r header-content-range))
+(defn <-etag [r] (<-header-field r header-etag))
+(defn <-expires [r] (<-header-field r header-expires))
+(defn <-last-modified [r] (<-header-field r header-last-modified))
+(defn <-link [r] (<-header-field r header-link))
+(defn <-location [r] (<-header-field r header-location))
+(defn <-p3p [r] (<-header-field r header-p3p))
+(defn <-proxy-authenticate [r] (<-header-field r header-proxy-authenticate))
+(defn <-public-key-pins [r] (<-header-field r header-public-key-pins))
+(defn <-retry-after [r] (<-header-field r header-retry-after))
+(defn <-server [r] (<-header-field r header-server))
+(defn <-set-cookie [r] (<-header-field r header-set-cookie))
+(defn <-strict-transport-security [r] (<-header-field r header-strict-transport-security))
+(defn <-trailer [r] (<-header-field r header-trailer))
+(defn <-transfer-encoding [r] (<-header-field r header-transfer-encoding))
+(defn <-tk [r] (<-header-field r header-tk))
+(defn <-upgrade [r] (<-header-field r header-upgrade))
+(defn <-vary [r] (<-header-field r header-vary))
+(defn <-via [r] (<-header-field r header-via))
+(defn <-warning [r] (<-header-field r header-warning))
+(defn <-www-authenticate [r] (<-header-field r header-www-authenticate))
+(defn <-refresh [r] (<-header-field r header-refresh))
+(defn <-header-status [r] (<-header-field r header-status))
+(defn <-powered-by [r] (<-header-field r header-powered-by))
+(defn <-request-id [r] (<-header-field r header-request-id))
+(defn <-xss-protection [r] (<-header-field r header-xss-protection))
 
 (defn accepts?
   "Determines if HTTP request req Accept header matches mimetype regex rgx."
   [req rgx]
   (when req (re-find rgx (<-accept req))))
-
 (defn accepts-edn? "Determine if HTTP request req accepts EDN." [req] (accepts? req mt-edn-regex))
 (defn accepts-html? "Determine if HTTP request req accepts HTML." [req] (accepts? req mt-html-regex))
 (defn accepts-json? "Determine if HTTP request req accepts JSON." [req] (accepts? req mt-json-regex))
@@ -358,10 +553,18 @@
 (defn accepts-xml? "Determine if HTTP request req accepts XML." [req] (accepts? req mt-xml-regex))
 (defn accepts-yaml? "Determine if HTTP request req accepts YAML." [req] (accepts? req mt-yaml-regex))
 
-(defn <-user-agent
-  "Extracts User Agent from HTTP request req."
-  [req]
-  (<-header req "user-agent" :user-agent))
+(defn content?
+  "Determines if content type of HTTP request/response document rr matches content regex rgx."
+  [rr rgx]
+  (when (and rr rgx)
+    (when-let [ct (<-content-type rr)]
+      (re-find rgx ct))))
+
+(defn edn-content? "Determines if content type of HTTP request req is EDN." [req] (content? req mt-edn-regex))
+(defn json-content? "Determines if content type of HTTP request req is JSON." [req] (content? req mt-json-regex))
+(defn transit-content? "Determines if content type of HTTP request req is Transit." [req] (content? req mt-transit-regex))
+(defn xml-content? "Determines if content type of HTTP request req is XML." [req] (content? req mt-xml-regex))
+(defn yaml-content? "Determines if content type of HTTP request req is YAML." [req] (content? req mt-yaml-regex))
 
 (defn ->json-str
   "Generate a JSON string from map m."
@@ -387,11 +590,11 @@
     (cond
       (map? b) (walk/keywordize-keys b)
       (edn-content? req) (walk/keywordize-keys (read-string (if (string? b) b (slurp b))))
+      (json-content? req) (json/parse-string (if (string? b) b (slurp b)) true)
+      (xml-content? req) (->cxml b)
       (transit-content? req) (-> (if (string? b) (->input-stream b) b)
                                  (transit/reader :json)
                                  transit/read)
-      ;; (walk/keywordize-keys b) ;; todo : convert transit to clojure map
-      (xml-content? req) (->cxml b)
       (yaml-content? req) (yaml/parse-string (if (string? b) b (slurp b)))
       :else (json/parse-string (if (string? b) b (slurp b)) true))))
 
@@ -437,6 +640,37 @@
         b (get r :body)]
     (transit/write writer b)
     (assoc r :body (.toString out))))
+
+;; header generation
+
+(defn header-field
+  "Added header field k with value x and merges with optional headers map hm."
+  [k x & [hm]]
+  (merge hm {k x}))
+
+(defn accept
+  "Generates a request header for accept for single arguments,
+  Merges existing map h with accept x.
+  Mimetype x may be supported type keyword: :json, :edn, :html, :text, :xml, :yaml"
+  [x & [hm]] (header-field header-accept (if (keyword? x) (get supported-mimetypes x x) x) hm))
+
+(defn content-type
+  "Generates a request header for content-type x for single arguments,
+  Merges existing map h with content-type x.
+  Mimetype x may be supported type keyword: :json, :edn, :html, :text, :xml, :yaml"
+  [x & [hm]] (header-field header-content-type (if (keyword? x) (get supported-mimetypes x x) x) hm))
+(defn content [x & [hm]] (content-type x hm))
+
+(defn pragma [x & [hm]] (header-field header-pragma x hm))
+(defn user-agent [x & [hm]] (header-field header-user-agent x hm))
+
+;; requests ================================================================
+
+(defn request
+  "Generates HTTP request document."
+  ([b] (request nil b))
+  ([h b]
+   (merge {:body b} (when (map? h) {:headers h}))))
 
 ;; responses ===============================================================
 
