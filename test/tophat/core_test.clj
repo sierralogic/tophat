@@ -139,3 +139,50 @@
     (is (= (when-let-not-ok [r (internal-server-error not-ok-body)]
                             (:body r))
            not-ok-body))))
+
+;; lifting
+
+(defn force-nil [& _] nil)
+(def nil-result-body "Nil is the result body.")
+(defn force-exception [& args] (throw (Exception. (str args))))
+
+(deftest testing-lifting
+  (testing "default lift"
+    (is (= (lift str "meh") (ok "meh")))
+    (is (= (lift * 2 3) (ok 6))))
+  (testing "default nil response status code"
+    (is (= (<-status (lift force-nil)) not-found-status)))
+  (testing "default exception status code"
+    (is (= (<-status (lift (fn [] (throw (Exception. "forcex"))))) internal-server-error-status)))
+  (testing "custom non-nil result status"
+    (is (= (<-status (lift-custom {:non-nil-response-status created-status} str "meh"))
+           created-status)))
+  (testing "custom nil result status"
+    (is (= (<-status (lift-custom {:nil-response-status bad-request-status} force-nil))
+           bad-request-status)))
+  (testing "custom non-nil result handler function"
+    (is (= (lift-custom {:result-handler-f (fn [r & _] (str "meh::" r))} str "meh")
+           (ok "meh::meh")))
+    (is (= (lift-custom {:result-handler-f (fn [r & _] (str "meh::" r))} * 2 3)
+           (ok "meh::6"))))
+  (testing "custom nil response body"
+    (is (= (lift-custom {:nil-response-body nil-result-body} force-nil)
+           (not-found nil-result-body)))
+    (is (= (lift-custom {:nil-result-handler-f (fn [& _] "should be ignored and :nil-response-body used")
+                         :nil-response-body nil-result-body}
+                        force-nil)
+           (not-found nil-result-body))))
+  (testing "custom nil result handler function"
+    (is (= (lift-custom {:nil-result-handler-f (fn [& _] nil-result-body)} force-nil)
+           (not-found nil-result-body)))
+    (is (= (lift-custom {:nil-result-handler-f (fn [os f args] {:args args})} force-nil)
+           (not-found {:args []})))
+    (is (= (lift-custom {:nil-result-handler-f (fn [os f args] {:args args})} force-nil :x :y)
+           (not-found {:args [:x :y]}))))
+  (testing "custom exception status"
+    (is (= (<-status (lift-custom {:exception-status bad-gateway-status} force-exception "meh"))
+           bad-gateway-status)))
+  (testing "custom exception result handler function"
+    (is (= (lift-custom {:exception-status accepted-status
+                         :exception-body-f (fn [e options f args] args)} force-exception :x :y)
+           (accepted [:x :y])))))
