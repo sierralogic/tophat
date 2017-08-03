@@ -32,7 +32,7 @@ In code:
 
 ## Examples
 
-**NOTE**: Examples require tophat v0.1.3 and later.
+**NOTE**: Examples require tophat v0.1.4 or later.
 
 ```clojure
 (require 'tophat.core)
