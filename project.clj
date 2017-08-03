@@ -1,4 +1,4 @@
-(defproject tophat "0.1.4"
+(defproject tophat "0.1.5"
   :description "Tophat is a Clojure library for handling HTTP request and response documents/maps."
   :url "http://sierralogic.com"
   :license {:name "Eclipse Public License"
