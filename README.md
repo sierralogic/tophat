@@ -314,23 +314,61 @@ Add to middleware handler:
 
 Not all functions return HTTP responses so Tophat provides *lifting* functions.
 
-What is lifting?
+*What is lifting?*
 
 Similiar to lifting in monads (don't worry, you don't have to know monads),
-lifting in Tophat wraps the non-response returning function into a function that
-returns an HTTP response document (with status and body) and also handles
-expections by wrapping the exception in an HTTP response document as well.
+lifting in Tophat wraps the non-HTTP-response returning function into a function that
+returns an HTTP response document (with `:status` and `:body`) and also handles
+exceptions by wrapping the exception in an HTTP response document as well.
 
-The simplest lift of a function (using the `lift` function )just returns an OK (200) response document
-if the lifted function returns a non-nil result with the result as the body, 
-a Not-Found (404) response document if the lifted function result is null, 
-and an Internal-Server-Error (500) and a distilled exception map as the body.
+The simplest lift of a function (using the `lift` function) returns 
+an OK (200) response document if the lifted function returns a non-nil result 
+with the result as the body,
 
-The default `lift` function takes the functio to be lifted as the first function
+```clojure
+(lift + 2 3)
+;; {:status 200 :status-text "OK" :body 5}
+``` 
+
+a Not-Found (404) response document if the lifted function result is `nil`, 
+
+```clojure
+(lift (fn [] nil))
+;; {:status 404, :status-text "Not Found", :body nil}
+```
+
+and an Internal-Server-Error (500) and a distilled exception map as the body
+if an exception is thrown.
+
+```clojure
+(lift / 1 0)
+;; =>
+{:status 500,
+ :status-text "Internal Server Error",
+ :body {:cause "Divide by zero",
+        :via [{:type "class java.lang.ArithmeticException",
+               :message "Divide by zero",
+               :at "clojure.lang.Numbers.divide(Numbers.java:158)"}],
+        :trace [{:class "tophat.core$lift_custom",
+                 :file "core.clj",
+                 :line 1246,
+                 :text "tophat.core$lift_custom.invokeStatic(core.clj:1246)"}
+                {:class "tophat.core$lift_custom",
+                 :file "core.clj",
+                 :line 1213,
+                 :text "tophat.core$lift_custom.doInvoke(core.clj:1213)"}
+                {:class "tophat.core$eval7978",
+                 :file "form-init6867913379230085047.clj",
+                 :line 1,
+                 :text "tophat.core$eval7978.invokeStatic(form-init6867913379230085047.clj:1)"}],
+        :exception-args (nil #object[clojure.core$_SLASH_ 0x27b1ff4b "clojure.core$_SLASH_@27b1ff4b"] (1 0))}}
+```
+
+The default `lift` function takes the function to be lifted as the first function
 and the arguments for that lifted function as variadic arguments (as many as
-needed on the end).
+needed on the end; indefinite arity).
 
-`lift` function
+`lift` function signature:
 
 ```clojure
 (defn lift [f & args]) 
@@ -339,12 +377,13 @@ needed on the end).
 
 The `lift` function may be called directly with the lifted function 
 and arguments:
+
 ```clojure
 (lift / 8 2)
 ;; {:status 200, :status-text "OK", :body 4}
 ```
-
 ... or a `partial` may be used to simplify code.
+
 ```clojure
 (def lifted-divide (partial lift /))
 
@@ -378,11 +417,13 @@ The lifted function is also wrapped to handle exceptions:
         :exception-args (nil #object[clojure.core$_SLASH_ 0x27b1ff4b "clojure.core$_SLASH_@27b1ff4b"] (8 0))}}
 ```
 
-In addition to the default lift function, Tophat also provides a more
+In addition to the default `lift` function, Tophat also provides a more
 customizable lifting function (`lift-custom`) that takes an options map
 as the first argument, the function to be lifted as the second argument,
 and all arguments to be used when calling the lifted function as variadic (as
 many as needed on the end).
+
+`lift-custom` function signature:
 
 ```clojure
 (defn lift-custom [options f & args])
@@ -403,8 +444,55 @@ common sense defaults:
  :exception-body-f :$function-with-exception-options-f-args} ; defaults to distilled exception map ->exception-info
 ```
 
+So if you wanted to change the `status` codes for handling non-nil, nil, and exceptions, then you
+could do a `partial` on `lift-custom` and other partials as needed:
+
+```clojure
+(def lift-custom-statuses (partial lift-custom {:non-nil-response-status created-status
+                                                :nil-response-status bad-request-status
+                                                :exception-status bad-gateway-status}))
+
+(lift-custom-statuses + 2 3)
+;; {:status 201, :status-text "Created", :body 5}
+
+(def cs-nil (partial lift-custom-statuses (fn [] nil)))
+
+(cs-nil)
+;; {:status 400, :status-text "Bad Request", :body nil}
+
+(def cs-div (partial lift-custom-statuses /))
+
+(cs-div 8 2)
+;; {:status 201, :status-text "Created", :body 4}
+
+(cs-div 1 0)
+;; =>
+{:status 502,
+ :status-text "Bad Gateway",
+ :body {:cause "Divide by zero",
+        :via [{:type "class java.lang.ArithmeticException",
+               :message "Divide by zero",
+               :at "clojure.lang.Numbers.divide(Numbers.java:158)"}],
+        :trace [{:class "tophat.core$lift_custom",
+                 :file "core.clj",
+                 :line 1246,
+                 :text "tophat.core$lift_custom.invokeStatic(core.clj:1246)"}
+                {:class "tophat.core$lift_custom",
+                 :file "core.clj",
+                 :line 1213,
+                 :text "tophat.core$lift_custom.doInvoke(core.clj:1213)"}
+                {:class "tophat.core$eval7994",
+                 :file "form-init6867913379230085047.clj",
+                 :line 1,
+                 :text "tophat.core$eval7994.invokeStatic(form-init6867913379230085047.clj:1)"}],
+        :exception-args ({:non-nil-response-status 201, :nil-response-status 400, :exception-status 502}
+                         #object[clojure.core$_SLASH_ 0x27b1ff4b "clojure.core$_SLASH_@27b1ff4b"]
+                         (1 0))}}
+
+``` 
+
 Here are some tests for lifting in Tophat to get a better idea on how lifting
-works in Tophat:
+works in the library:
 
 ```clojure
 (defn force-nil [& _] nil)
@@ -453,7 +541,7 @@ works in Tophat:
            (accepted [:x :y])))))
 ```
 
-And here are some more examples of using different handler function 
+And here are some examples of using different handler function 
 options for `lift-custom`:
 
 ```clojure
