@@ -46,6 +46,57 @@
   [m]
   (yaml/generate-string m))
 
+(defn trace-dup?
+  [t1 t2]
+  (and (= (:class t1) (:class t2))
+       (= (:file t1) (:file t2))
+       (= (:line t1) (:line t2))))
+
+(defn collapse-stack-trace
+  [ts]
+  (loop [prev nil
+         acc []
+         traces ts]
+    (if (empty? traces)
+      acc
+      (recur (first traces)
+             (if (trace-dup? prev (first traces))
+               acc
+               (conj acc (first traces)))
+             (rest traces)))))
+
+(defn trace->map
+  [t]
+  {:class (.getClassName t)
+   :file (.getFileName t)
+   :line (.getLineNumber t)
+   ;; :method (.getMethodName t)
+   ;; :native? (.isNativeMethod t)
+   :text (str t)})
+
+(defn truesy [_] true)
+
+(defn no-clojure-or-java-traces
+  [x]
+  (not (or (str/starts-with? (:class x) "clojure.")
+           (str/starts-with? (:class x) "sun.")
+           (str/starts-with? (:class x) "java."))))
+
+(defn ->emap
+  [em & [filtr]]
+  (-> em
+      (update :via #(reduce (fn [a v] (conj (or a []) (-> v
+                                                          (update :type str)
+                                                          (update :at str))))
+                            nil
+                            %))
+      (update :trace #(vec (collapse-stack-trace (filter (or filtr truesy)
+                                                         (map trace->map %)))))))
+
+(defn ->exception-info
+  [e & args]
+  (assoc (->emap (Throwable->map e) no-clojure-or-java-traces) :exception-args args))
+
 ;; status
 
 ;; 1xx Informational
@@ -207,7 +258,7 @@
 (defn status-text
   "Returns the status text for given HTTP status x."
   [x]
-  (get status-texts x))
+  (get status-texts x (str "Unknown HTTP status code " x ".")))
 
 (defn parse-query-string
   "Parse an HTTP query string."
@@ -679,7 +730,7 @@
   ([b] (response ok-status nil b))
   ([s b] (response s nil b))
   ([s h b]
-   (merge {:status s :body b} (when (map? h) {:headers h}))))
+   (merge {:status s :status-text (status-text s) :body b} (when (map? h) {:headers h}))))
 
 (defn accepted
   "Generate HTTP response document with status ACCEPTED."
@@ -1158,6 +1209,57 @@
          nil
          (let [~form temp#]
            ~@body)))))
+
+(defn lift-custom
+  "Lifts a function f with options arguments args using options map to handle processing.
+
+  options map:
+
+  {:non-nil-response-status :$valid-http-status-code ; defaults to 200 (OK)
+   :result-handler-f :$function-with-result-options-f-args-parameters ; if none, pass thru non-nil result as :body
+   :nil-response-status :$valid-http-status-code ; defaults to 404 (Not Found)
+   :nil-response-body :$scalar-value-for-nil-responses ; if this is non-nil, uses this and ignores :nil-result-handler-f
+   :nil-result-handler-f :$function-with-options-f-args-parameters ; if none, sets :body in response to nil
+   :exception-status :$valid-http-status-code ; defaults to 500 (Internal Server Error)
+   :exception-body-f :$function-with-exception-options-f-args ; defaults to distilled exception map ->exception-info
+   }
+
+  Example functions:
+
+  :result-handler-f
+
+  (fn [r & _] (str \"Converts result to string and ignores options, f, and args: \" r))
+  (fn [r options f args] {:result r :options options :f f :args args})
+
+  :nil-result-handler-f
+
+  (fn [& _] \"Result is nil.\") ; same as using the :nil-response-body \"Result is nil.\" in options
+  (fn [options f args] {:options options :f f :args args :message \"Result was nil.\"})
+
+  :exception-body-f
+
+  (fn [e & _] (.getMessage e)) ; just sets response :body to exception message
+  (fn [e options f args] (str \"Exception occurred with options: \" options \", f \" f \", args \" args \" [\" e \"]))
+  "
+  [options f & args]
+  (try
+    (if-let [r (apply f args)]
+      (response (get options :non-nil-response-status ok-status)
+                (if-let [rhf (get options :result-handler-f)]
+                  (rhf r options f args)
+                  r))
+      (response (get options :nil-response-status not-found-status)
+                (if-let [nrb (get options :nil-response-body)]
+                  nrb
+                  (when-let [nrhf (get options :nil-result-handler-f)]
+                    (nrhf options f (vec args))))))
+    (catch Exception e
+      (response (get options :exception-status internal-server-error-status)
+                ((get options :exception-body-f ->exception-info) e options f args)))))
+
+(def lift
+  "Lifts function to HTTP response with default options."
+  (partial lift-custom nil))
 
 ;; developer
 
