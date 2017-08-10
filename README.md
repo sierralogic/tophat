@@ -15,7 +15,7 @@ based on statuses.
 
 ## Tophat Build Status
 
-CircleCI : <img src="https://circleci.com/gh/sierralogic/tophat.png?circle-token=6459e6f386bf70e85440408259137929828218a3"/>
+<img src="https://circleci.com/gh/sierralogic/tophat.png?style=shield&circle-token=6459e6f386bf70e85440408259137929828218a3"/>
 
 ## Usage
 
