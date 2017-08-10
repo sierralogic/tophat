@@ -13,7 +13,7 @@ As the library evolved, the request/response maps (aka Ring maps) were not only 
 to handle HTTP-based handling, but also by function for results that can be processed
 based on statuses.
 
-## Tophat Build Status
+## Build Status
 
 <img src="https://circleci.com/gh/sierralogic/tophat.png?style=shield&circle-token=6459e6f386bf70e85440408259137929828218a3"/>
 
