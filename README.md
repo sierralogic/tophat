@@ -4,8 +4,6 @@ Tophat is a Clojure library for handling HTTP request and response documents/map
 
 Tophat API documentation may be found <a href="https://sierralogic.github.io/tophat/doc/tophat.core.html" target="_blank">here</a>.
 
-https://circleci.com/gh/sierralogic/tophat.png?circle-token=6459e6f386bf70e85440408259137929828218a3
-
 ## Rationale
 
 Tophat began as a utility library that was passed between projects to handle
@@ -14,6 +12,10 @@ HTTP request and response documents.
 As the library evolved, the request/response maps (aka Ring maps) were not only being used
 to handle HTTP-based handling, but also by function for results that can be processed
 based on statuses.
+
+## Tophat Build Status
+
+CircleCI : <img src="https://circleci.com/gh/sierralogic/tophat.png?circle-token=6459e6f386bf70e85440408259137929828218a3"/>
 
 ## Usage
 
