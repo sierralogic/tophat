@@ -364,7 +364,7 @@ if an exception is thrown.
         :exception-args (nil #object[clojure.core$_SLASH_ 0x27b1ff4b "clojure.core$_SLASH_@27b1ff4b"] (1 0))}}
 ```
 
-The default `lift` function takes the function to be lifted as the first function
+The default `lift` function takes the function to be lifted as the first argument
 and the arguments for that lifted function as variadic arguments (as many as
 needed on the end; indefinite arity).
 
