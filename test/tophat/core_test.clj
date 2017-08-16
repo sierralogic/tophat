@@ -186,3 +186,22 @@
     (is (= (lift-custom {:exception-status accepted-status
                          :exception-body-f (fn [e options f args] args)} force-exception :x :y)
            (accepted [:x :y])))))
+
+(def lift+ (partial lift +))
+(def lift* (partial lift *))
+(def lift-div (partial lift /))
+
+(deftest testing-ok-thread-macros
+  (testing "simple ok-> threads"
+    (is (= (<-body (ok-> 3 (lift+ 2)))
+           5))
+    (is (= (<-body (ok-> 3 (lift+ 2) (lift* 4) (lift+ 13)))
+           33))
+    (is (= (<-body (ok-> 3 (+ 2)))
+           5))
+    (is (= (ok-> 3 (+ 2) (* 4) (+ 13))
+           33)))
+  (testing "simple ok-> threads that fail"
+    (is (= (<-status (ok-> 3 (lift-div 0)))
+           internal-server-error-status))))
+

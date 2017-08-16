@@ -1257,9 +1257,85 @@
       (response (get options :exception-status internal-server-error-status)
                 ((get options :exception-body-f ->exception-info) e options f args)))))
 
-(def lift
-  "Lifts function to HTTP response with default options."
-  (partial lift-custom nil))
+(defn lift
+  "Lifts function f to HTTP response with default options and variadic arguments args."
+  [f & args]
+  (apply lift-custom (concat [nil f] args)))
+
+(defn response?
+  "Determines if x is a map with a non-nil :status value and contains a :body key."
+  [x]
+  (and (map? x) (contains? x :status) (contains? x :body)))
+
+(defmacro ok->
+  "When expr is not an ok status document, threads it into
+  the first form (via ->),
+  and when that result is ok, through the next etc"
+  [expr & forms]
+  (let [g (gensym)
+        steps (map (fn [step] `(if (and (not-ok? ~g)
+                                        (response? ~g))
+                                 ~g
+                                 (-> (<-body ~g) ~step)))
+                   forms)]
+    `(let [~g ~expr
+           ~@(interleave (repeat g) (butlast steps))]
+       ~(if (empty? steps)
+          g
+          (last steps)))))
+
+(defmacro some-ok->
+  "When expr is not an ok status document or is nil or body is nil,
+  threads it into the first form (via ->),
+  and when that result is ok, through the next etc"
+  [expr & forms]
+  (let [g (gensym)
+        steps (map (fn [step] `(if (or (and (not-ok? ~g)
+                                            (response? ~g))
+                                       (or (nil? ~g)
+                                           (nil? (<-body ~g))))
+                                 ~g
+                                 (-> (<-body ~g) ~step)))
+                   forms)]
+    `(let [~g ~expr
+           ~@(interleave (repeat g) (butlast steps))]
+       ~(if (empty? steps)
+          g
+          (last steps)))))
+
+(defmacro ok->>
+  "When expr is not nil, threads it into the first form (via ->>),
+  and when that result is ok, through the next etc"
+  [expr & forms]
+  (let [g (gensym)
+        steps (map (fn [step] `(if (and (not-ok? ~g)
+                                        (response? ~g))
+                                 ~g
+                                 (->> ~g ~step)))
+                   forms)]
+    `(let [~g ~expr
+           ~@(interleave (repeat g) (butlast steps))]
+       ~(if (empty? steps)
+          g
+          (last steps)))))
+
+(defmacro some-ok->>
+  "When expr is not nil, threads it into the first form (via ->>),
+  and when that result and body is not nil, through the next etc"
+  [expr & forms]
+  (let [g (gensym)
+        steps (map (fn [step] `(if (or (and (not-ok? ~g)
+                                            (response? ~g))
+                                       (or (nil? ~g)
+                                           (nil? (<-body ~g))))
+                                 ~g
+                                 (->> ~g ~step)))
+                   forms)]
+    `(let [~g ~expr
+           ~@(interleave (repeat g) (butlast steps))]
+       ~(if (empty? steps)
+          g
+          (last steps)))))
 
 ;; developer
 
