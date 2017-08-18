@@ -22,7 +22,7 @@ based on statuses.
 In `project.clj` dependencies:
 
 ```clojure
-[tophat "0.1.4"]
+[tophat "0.1.5"]
 
 ```
 
@@ -36,7 +36,7 @@ In code:
 
 ## Examples
 
-**NOTE**: Examples require tophat v0.1.4 or later.
+**NOTE**: Examples require tophat v0.1.5 or later.
 
 ```clojure
 (require 'tophat.core)
@@ -565,6 +565,240 @@ options for `lift-custom`:
   (fn [e options f args] (str "Exception occurred with options: " options ", f " f ", args " args " [" e "]))
 ```
 
+### Thread Macros
+
+#### Clojure Thread Macros
+
+Clojure provides multiple function [threading macros](https://clojure.org/guides/threading_macros), 
+the simplest being `->`.
+
+```clojure
+(-> 3 inc (+ 41) (/ 5))
+;; 9
+```
+
+This won't be a complete coverage of Clojure thread macros, but just a quick intro to 
+better understand the tophat thread macros.
+
+In the Clojure `->` thread-first macro example above, the initial argument `3` is passed as the **first**
+argument to the `inc` function, the result of apply the `inc` function is `4` [`(inc 3) ; 4`] is then
+passed as the **first** argument to the `(+ 41)` entry with a result of `45` [`(+ 4 41) ; 45`] that 
+is then passed as the **first** argument to the `(/ 5)` entry with the final result of `9`
+[`(/ 45 5) ; 9`].
+
+There are Clojure thread macros that put the result of the previous function application as the **last**
+argument, and those are called thread-last macros for obvious reasons.  The simplest of Clojure
+thread-last macros is `->>`.
+
+```clojure
+(->> 3 inc (+ 41) (/ 5))
+;; 1/9
+``` 
+
+In the Clojure `->>` thread-last macro example above, the initial argument `3` is passed as the **last**
+argument to the `inc` function, the result of apply the `inc` function is `4` [`(inc 3) ; 4`] is then
+passed as the **last** argument to the `(+ 41)` entry with a result of `45` [`(+ 41 4) ; 45`] (addition
+is commutative; meaning the addition operation returns the same result no matter the order of arguments)
+that is then passed as the **last** argument to the `(/ 5)` entry with the final result of `1/9`
+[`(/ 5 45) ; 1/9`].
+
+Note division is NOT commutative like addition so order does matter (`(not (= (/ 45 5) (/ 5 45))) ; true).
+
+Clojure thread macros also don't handle exceptions, so you get throw exceptions if the any of the function
+applications throws an exception.  This is not a short-coming of thread macros, just something to
+consider when using thread macros.
+ 
+#### Thread Macros in tophat
+
+Thread macros in tophat are essentially modified from the core Clojure thread macro code (just like
+the tophat `if/when-let` variants are modified from the core Clojure `if/when-let` code).
+
+Thread macros in tophat differ in that they handle exceptions (by returning a generic expection or other
+non-ok HTTP response document but iff the thread functions have been `lifted`) and can handle 
+tophat `lifted` functions as well as non-lifted functions.
+
+Tophat thread macros work with non-lifted functions but will not wrap an exception if thrown:
+
+```clojure
+(ok-> 2 inc (+ 39))
+;; 42
+(ok-> 2 inc (+ 39) (/ 6))
+;; 7
+(ok-> 2 (/ 0))
+;; ArithmeticException Divide by zero  clojure.lang.Numbers.divide (Numbers.java:158)
+
+(ok->> 2 inc (+ 39))
+;; 42
+(ok->> 2 inc (+ 39) (/ 6))
+;; 1/7
+(ok->> 2 (/ 0))
+;; 0
+(ok->> 1 dec (/ 42))
+;;ArithmeticException Divide by zero  clojure.lang.Numbers.divide (Numbers.java:158)
+```
+
+Functionally, the Clojure `->` and `->>` thread macros are comparable to the topcat
+`ok->` and `ok->>` thread macros when using non-lifted functions.
+
+So why use tophat threading macros if they're the same as Clojure's?
+
+Well, tophat thread macros do more than Clojure's core thread macros in that they
+handle lifted tophat functions, handle exceptions, and working with HTTP response
+documents and scalars as results.
+
+Here are some lifted functions definitions leveraging `partial` used for the examples:
+
+```clojure
+(def lift+ (partial lift +))
+;; => #'tophat.core/lift+
+(def lift- (partial lift -))
+;; => #'tophat.core/lift-
+(def lift* (partial lift *))
+;; => #'tophat.core/lift*
+(def lift-div (partial lift /))
+;; => #'tophat.core/lift-div
+
+(lift+ 39 3)
+;; => {:status 200, :status-text "OK", :body 42}
+(lift- 66 24)
+;; => {:status 200, :status-text "OK", :body 42}
+(lift* 6 7)
+;; => {:status 200, :status-text "OK", :body 42}
+(lift-div 84 2)
+;; => {:status 200, :status-text "OK", :body 42}
+
+(lift-div 42 0)
+;; =>
+{:status 500,
+ :status-text "Internal Server Error",
+ :body {:cause "Divide by zero",
+        :via [{:type "class java.lang.ArithmeticException",
+               :message "Divide by zero",
+               :at "clojure.lang.Numbers.divide(Numbers.java:158)"}],
+        :trace [:trace-maps],
+        :exception-args (nil #object[clojure.core$_SLASH_ 0x6f211260 "clojure.core$_SLASH_@6f211260"] (42 0))}}
+        
+```
+
+For information about tophat lifting, `lift`, and `lift-custom`, please refer to the previous **Lifting** section.
+
+```clojure
+(def lift-nil (partial lift (fn [& _])))
+;; => #'tophat.core/lift-nil
+
+(defn force-nil [& _] nil)
+;; => #'tophat.core/force-nil
+
+(defn force-exception [& [m]] (throw (Exception. (or m "Forced exception..."))))
+;; #'tophat.core/force-exception
+
+(ok-> 3 (lift+ 100) (lift- 101) (lift* 42) (lift-div 2)) ;; (/ (* (- (+ 3 100) 101) 42) 2) => 42
+;; => {:status 200, :status-text "OK", :body 42}
+
+(ok-> 3 (lift+ 100) (lift- 101) (lift* 42) (lift-div 0))
+;; =>
+{:status 500,
+ :status-text "Internal Server Error",
+ :body {:cause "Divide by zero",
+        :via [{:type "class java.lang.ArithmeticException",
+               :message "Divide by zero",
+               :at "clojure.lang.Numbers.divide(Numbers.java:158)"}],
+        :trace [:trace-maps],
+        :exception-args (nil #object[clojure.core$_SLASH_ 0x6f211260 "clojure.core$_SLASH_@6f211260"] (84 0))}}
+
+;; note that you can use non-lifted functions throughout the thread as long as final function is lifted to get an HTTP response
+(ok-> 3 (+ 100) (- 101) (* 42) (lift-div 2))
+;; => {:status 200, :status-text "OK", :body 42}
+
+;; but... if there is an exception thrown from the non-lifted thread functions, it will be thrown.
+(ok-> 3 (+ 100) (/ 0) (- 101) (* 42) (lift-div 2))
+;; ArithmeticException Divide by zero  clojure.lang.Numbers.divide (Numbers.java:158)
+
+```
+
+So far, the examples have been dealing exception handling and not cases where one of the lifted thread function
+returns a non-OK HTTP response.
+
+```clojure
+(defn force-bad-gateway [& _] (bad-gateway "forced bad gateway"))
+;; => #'tophat.core/force-bad-gateway
+
+(ok-> 3 (+ 100) force-bad-gateway (- 101) (* 42) (lift-div 2))
+;; => {:status 502, :status-text "Bad Gateway", :body "forced bad gateway"}
+
+(ok->> 3 (+ 100) force-bad-gateway (- 101) (* 42) (lift-div 2))
+;; => {:status 502, :status-text "Bad Gateway", :body "forced bad gateway"}
+```
+ 
+Note that both `ok->` and `ok->>` tophat thread macros short-circuit at the first case of non-OK response from
+applying the thread macro functions.
+
+In a monadic sense, the tophat macros `ok->` and `ok->>` handle any response that is an HTTP response of OK (or a scalar) as a 
+`Success` to continue the threading operation, and any non-OK HTTP status (200) response from applying the thread function as a
+`Failure`. 
+
+Therefore, you can use the tophat thread macros to execute a chain for tophat lifted functions with exception handling 
+built-in with the knowledge that you will receive a valid HTTP response document (either Success (OK) or Failure (not OK)) 
+(to reiterate, iff you use only tophat lifted functions as thread macro functions).
+
+What if you want to consider *ANY* of the HTTP SUCCESS status codes (2xx) to be a Success and not just responses with
+OK status codes (200)?
+
+Then you can use the tophat `success->` and `success->>` thread which will consider 2xx status as successes and
+the processing is just at outlined in the `ok->` and `ok->>` examples.  
+
+```clojure
+(defn force-created [& xs] (created (or (first xs) "forced created")))
+;; => #'tophat.core/force-created
+
+(success-> 4 (lift+ 2) force-created (lift- 33)) ;; force-create returns status 201 but macro thread continues past
+;; => {:status 200, :status-text "OK", :body -27}
+(success-> 4 (lift+ 2) (lift- 33) force-created)
+;; => {:status 201, :status-text "Created", :body -27}
+
+;; note that a non-OK success status (2xx) may be tacked on the end of the ok-> to get the same effect
+(ok-> 4 (lift+ 2) (lift- 33) force-created)
+;; => {:status 201, :status-text "Created", :body -27}
+```
+
+**Some other things to note about tophat thread macros**
+
+* you may have to define `lifted` functions *outside* of the tophat thread macros
+
+```clojure
+(def lift+ (partial lift +))
+;; #'tophat.core/lift+
+
+;; works
+(ok-> 2 inc (lift+ 40))
+;; {:status 200, :status-text "OK", :body 43}
+
+
+;; throws exception since the `lift` function is expection a function, not a scalar value of 2
+;; since the thread-first macro will apply the function as (lift 2 + 40) instead of (lift + 2 40)
+(ok-> 2 inc (lift + 40))
+;;
+{:status 500,
+ :status-text "Internal Server Error",
+ :body {:cause "java.lang.Long cannot be cast to clojure.lang.IFn",
+        :via [{:type "class java.lang.ClassCastException",
+               :message "java.lang.Long cannot be cast to clojure.lang.IFn",
+               :at "clojure.core$apply.invokeStatic(core.clj:641)"}],
+        :trace [:trace-maps-here]],
+        :exception-args (nil 3 (#object[clojure.core$_PLUS_ 0xa8e3b35 "clojure.core$_PLUS_@a8e3b35"] 40))}}
+```
+However, the tophat `ok->>` thread-last macro will work in the case above:
+
+```clojure
+(ok->> 2 inc (lift + 39)) ; (lift + 39 (inc 2))
+;; => {:status 200, :status-text "OK", :body 42}
+```
+
+The `lift` function in the code above is applied with correct argument order `(lift + 39 2)`.  
+Addition (+) is commutative so order doesn't matter for the correct result, but with 
+non-commutative operations/functions (like divison and subtraction), using tophat thread-last to embed 
+the `lift` in the tophat threading macros may not be an option.
+ 
 ## License
 
 Copyright © 2017 SierraLogic LLC

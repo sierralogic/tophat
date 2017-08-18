@@ -1285,6 +1285,24 @@
           g
           (last steps)))))
 
+(defmacro success->
+  "When expr is not an success (2xx) status document, threads it into
+  the first form (via ->),
+  and when that result is ok, through the next etc"
+  [expr & forms]
+  (let [g (gensym)
+        steps (map (fn [step] `(if (or (and (fail? ~g)
+                                            (response? ~g))
+                                       (nil? ~g))
+                                 (if (nil? ~g) (not-found ~g) ~g)
+                                 (-> (<-body ~g) ~step)))
+                   forms)]
+    `(let [~g ~expr
+           ~@(interleave (repeat g) (butlast steps))]
+       ~(if (empty? steps)
+          g
+          (last steps)))))
+
 (defmacro some-ok->
   "When expr is not an ok status document or is nil or body is nil,
   threads it into the first form (via ->),
@@ -1292,6 +1310,27 @@
   [expr & forms]
   (let [g (gensym)
         steps (map (fn [step] `(if (or (and (not-ok? ~g)
+                                            (response? ~g))
+                                       (or (nil? ~g)
+                                           (nil? (<-body ~g))))
+                                 (if (nil? ~g)
+                                   (not-found ~g)
+                                   ~g)
+                                 (-> (<-body ~g) ~step)))
+                   forms)]
+    `(let [~g ~expr
+           ~@(interleave (repeat g) (butlast steps))]
+       ~(if (empty? steps)
+          g
+          (last steps)))))
+
+(defmacro some-success->
+  "When expr is not an ok status document or is nil or body is nil,
+  threads it into the first form (via ->),
+  and when that result is ok, through the next etc"
+  [expr & forms]
+  (let [g (gensym)
+        steps (map (fn [step] `(if (or (and (fail? ~g)
                                             (response? ~g))
                                        (or (nil? ~g)
                                            (nil? (<-body ~g))))
@@ -1323,12 +1362,49 @@
           g
           (last steps)))))
 
+(defmacro success->>
+  "When expr is not nil, threads it into the first form (via ->>),
+  and when that result is success, through the next etc"
+  [expr & forms]
+  (let [g (gensym)
+        steps (map (fn [step] `(if (or (and (fail? ~g)
+                                            (response? ~g))
+                                       (nil? ~g))
+                                 (if (nil? ~g) (not-found ~g) ~g)
+                                 (->> (<-body ~g) ~step)))
+                   forms)]
+    `(let [~g ~expr
+           ~@(interleave (repeat g) (butlast steps))]
+       ~(if (empty? steps)
+          g
+          (last steps)))))
+
 (defmacro some-ok->>
   "When expr is not nil, threads it into the first form (via ->>),
   and when that result and body is not nil, through the next etc"
   [expr & forms]
   (let [g (gensym)
         steps (map (fn [step] `(if (or (and (not-ok? ~g)
+                                            (response? ~g))
+                                       (or (nil? ~g)
+                                           (nil? (<-body ~g))))
+                                 (if (nil? ~g)
+                                   (not-found ~g)
+                                   ~g)
+                                 (->> (<-body ~g) ~step)))
+                   forms)]
+    `(let [~g ~expr
+           ~@(interleave (repeat g) (butlast steps))]
+       ~(if (empty? steps)
+          g
+          (last steps)))))
+
+(defmacro some-success->>
+  "When expr is not nil, threads it into the first form (via ->>),
+  and when that result and body is not nil, through the next etc"
+  [expr & forms]
+  (let [g (gensym)
+        steps (map (fn [step] `(if (or (and (fail? ~g)
                                             (response? ~g))
                                        (or (nil? ~g)
                                            (nil? (<-body ~g))))
