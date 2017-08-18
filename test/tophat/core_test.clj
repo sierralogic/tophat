@@ -189,7 +189,9 @@
 
 (def lift+ (partial lift +))
 (def lift* (partial lift *))
+(def lift- (partial lift -))
 (def lift-div (partial lift /))
+(defn lift-nil [& _] (bad-gateway nil))
 
 (deftest testing-ok-thread-macros
   (testing "simple ok-> threads"
@@ -202,6 +204,55 @@
     (is (= (ok-> 3 (+ 2) (* 4) (+ 13))
            33)))
   (testing "simple ok-> threads that fail"
+    (is (= (<-status (ok-> 3 (lift+ 4 2) (force-nil) (lift- 3)))
+           not-found-status))
     (is (= (<-status (ok-> 3 (lift-div 0)))
            internal-server-error-status))))
 
+(deftest testing-some-ok-thread-macros
+  (testing "simple some-ok-> threads"
+    (is (= (<-body (some-ok-> 3 (lift+ 2)))
+           5))
+    (is (= (<-body (some-ok-> 3 (lift+ 2) (lift* 4) (lift+ 13)))
+           33))
+    (is (= (<-body (some-ok-> 3 (+ 2)))
+           5))
+    (is (= (some-ok-> 3 (+ 2) (* 4) (+ 13))
+           33)))
+  (testing "simple some-ok-> threads that fail"
+    (is (= (<-status (some-ok-> 3 (lift+ 4) (lift-nil) (lift+ 33)))
+           bad-gateway-status))
+    (is (= (<-status (some-ok-> 3 (lift-div 0)))
+           internal-server-error-status))))
+
+(deftest testing-ok-last-thread-macros
+  (testing "simple ok->> threads"
+    (is (= (<-body (ok->> 3 (lift+ 2)))
+           5))
+    (is (= (<-body (ok->> 3 (lift+ 2) (lift* 4) (lift+ 13)))
+           33))
+    (is (= (<-body (ok->> 3 (+ 2)))
+           5))
+    (is (= (ok->> 3 (+ 2) (* 4) (+ 13))
+           33)))
+  (testing "simple ok->> threads that fail"
+    (is (= (<-status (ok->> 3 (lift+ 4 2) (force-nil) (lift- 3)))
+           not-found-status))
+    (is (= (<-status (ok->> 0 (lift-div 3)))
+           internal-server-error-status))))
+
+(deftest testing-some-ok-last-thread-macros
+  (testing "simple some-ok->> threads"
+    (is (= (<-body (some-ok->> 3 (lift+ 2)))
+           5))
+    (is (= (<-body (some-ok->> 3 (lift+ 2) (lift* 4) (lift+ 13)))
+           33))
+    (is (= (<-body (some-ok->> 3 (+ 2)))
+           5))
+    (is (= (some-ok->> 3 (+ 2) (* 4) (+ 13))
+           33)))
+  (testing "simple some-ok->> threads that fail"
+    (is (= (<-status (some-ok->> 3 (lift+ 4) (lift-nil) (lift+ 33)))
+           bad-gateway-status))
+    (is (= (<-status (some-ok->> 0 (lift-div 4)))
+           internal-server-error-status))))

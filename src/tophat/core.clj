@@ -1133,7 +1133,7 @@
   [x]
   (if-some [b (get x :body)]
     (<-body b)
-    x))
+    (when-not (and (map? x) (contains? x :body)) x)))
 
 (defn unwrap
   "Unwraps the body of x recursively."
@@ -1273,9 +1273,10 @@
   and when that result is ok, through the next etc"
   [expr & forms]
   (let [g (gensym)
-        steps (map (fn [step] `(if (and (not-ok? ~g)
-                                        (response? ~g))
-                                 ~g
+        steps (map (fn [step] `(if (or (and (not-ok? ~g)
+                                            (response? ~g))
+                                       (nil? ~g))
+                                 (if (nil? ~g) (not-found ~g) ~g)
                                  (-> (<-body ~g) ~step)))
                    forms)]
     `(let [~g ~expr
@@ -1294,7 +1295,9 @@
                                             (response? ~g))
                                        (or (nil? ~g)
                                            (nil? (<-body ~g))))
-                                 ~g
+                                 (if (nil? ~g)
+                                   (not-found ~g)
+                                   ~g)
                                  (-> (<-body ~g) ~step)))
                    forms)]
     `(let [~g ~expr
@@ -1308,10 +1311,11 @@
   and when that result is ok, through the next etc"
   [expr & forms]
   (let [g (gensym)
-        steps (map (fn [step] `(if (and (not-ok? ~g)
-                                        (response? ~g))
-                                 ~g
-                                 (->> ~g ~step)))
+        steps (map (fn [step] `(if (or (and (not-ok? ~g)
+                                            (response? ~g))
+                                       (nil? ~g))
+                                 (if (nil? ~g) (not-found ~g) ~g)
+                                 (->> (<-body ~g) ~step)))
                    forms)]
     `(let [~g ~expr
            ~@(interleave (repeat g) (butlast steps))]
@@ -1328,8 +1332,10 @@
                                             (response? ~g))
                                        (or (nil? ~g)
                                            (nil? (<-body ~g))))
-                                 ~g
-                                 (->> ~g ~step)))
+                                 (if (nil? ~g)
+                                   (not-found ~g)
+                                   ~g)
+                                 (->> (<-body ~g) ~step)))
                    forms)]
     `(let [~g ~expr
            ~@(interleave (repeat g) (butlast steps))]
