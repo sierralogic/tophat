@@ -602,9 +602,9 @@ is commutative; meaning the addition operation returns the same result no matter
 that is then passed as the **last** argument to the `(/ 5)` entry with the final result of `1/9`
 [`(/ 5 45) ; 1/9`].
 
-Note division is NOT commutative like addition so order does matter (`(not (= (/ 45 5) (/ 5 45))) ; true).
+Note division is NOT commutative like addition so order does matter (`(not (= (/ 45 5) (/ 5 45))) ; true`).
 
-Clojure thread macros also don't handle exceptions, so you get throw exceptions if the any of the function
+Clojure thread macros also don't handle exceptions, so you get thrown exceptions if the any of the function
 applications throws an exception.  This is not a short-coming of thread macros, just something to
 consider when using thread macros.
  
@@ -643,7 +643,7 @@ Functionally, the Clojure `->` and `->>` thread macros are comparable to the top
 So why use tophat threading macros if they're the same as Clojure's?
 
 Well, tophat thread macros do more than Clojure's core thread macros in that they
-handle lifted tophat functions, handle exceptions, and working with HTTP response
+process lifted tophat functions, handle exceptions, and work with HTTP response
 documents and scalars as results.
 
 Here are some lifted functions definitions leveraging `partial` used for the examples:
