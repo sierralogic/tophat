@@ -256,3 +256,67 @@
            bad-gateway-status))
     (is (= (<-status (some-ok->> 0 (lift-div 4)))
            internal-server-error-status))))
+
+(deftest testing-success-thread-macros
+  (testing "simple success-> threads"
+    (is (= (<-body (success-> 3 (lift+ 2)))
+           5))
+    (is (= (<-body (success-> 3 (lift+ 2) (lift* 4) (lift+ 13)))
+           33))
+    (is (= (<-body (success-> 3 (+ 2)))
+           5))
+    (is (= (success-> 3 (+ 2) (* 4) (+ 13))
+           33)))
+  (testing "simple success-> threads that fail"
+    (is (= (<-status (success-> 3 (lift+ 4 2) (force-nil) (lift- 3)))
+           not-found-status))
+    (is (= (<-status (success-> 3 (lift-div 0)))
+           internal-server-error-status))))
+
+(deftest testing-some-success-thread-macros
+  (testing "simple some-success-> threads"
+    (is (= (<-body (some-success-> 3 (lift+ 2)))
+           5))
+    (is (= (<-body (some-success-> 3 (lift+ 2) (lift* 4) (lift+ 13)))
+           33))
+    (is (= (<-body (some-success-> 3 (+ 2)))
+           5))
+    (is (= (some-success-> 3 (+ 2) (* 4) (+ 13))
+           33)))
+  (testing "simple some-success-> threads that fail"
+    (is (= (<-status (some-success-> 3 (lift+ 4) (lift-nil) (lift+ 33)))
+           bad-gateway-status))
+    (is (= (<-status (some-success-> 3 (lift-div 0)))
+           internal-server-error-status))))
+
+(deftest testing-success-last-thread-macros
+  (testing "simple success->> threads"
+    (is (= (<-body (success->> 3 (lift+ 2)))
+           5))
+    (is (= (<-body (success->> 3 (lift+ 2) (lift* 4) (lift+ 13)))
+           33))
+    (is (= (<-body (success->> 3 (+ 2)))
+           5))
+    (is (= (success->> 3 (+ 2) (* 4) (+ 13))
+           33)))
+  (testing "simple success->> threads that fail"
+    (is (= (<-status (success->> 3 (lift+ 4 2) (force-nil) (lift- 3)))
+           not-found-status))
+    (is (= (<-status (success->> 0 (lift-div 3)))
+           internal-server-error-status))))
+
+(deftest testing-some-success-last-thread-macros
+  (testing "simple some-success->> threads"
+    (is (= (<-body (some-success->> 3 (lift+ 2)))
+           5))
+    (is (= (<-body (some-success->> 3 (lift+ 2) (lift* 4) (lift+ 13)))
+           33))
+    (is (= (<-body (some-success->> 3 (+ 2)))
+           5))
+    (is (= (some-success->> 3 (+ 2) (* 4) (+ 13))
+           33)))
+  (testing "simple some-success->> threads that fail"
+    (is (= (<-status (some-success->> 3 (lift+ 4) (lift-nil) (lift+ 33)))
+           bad-gateway-status))
+    (is (= (<-status (some-success->> 0 (lift-div 4)))
+           internal-server-error-status))))

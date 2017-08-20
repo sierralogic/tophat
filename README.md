@@ -761,6 +761,33 @@ the processing is just at outlined in the `ok->` and `ok->>` examples.
 ;; => {:status 201, :status-text "Created", :body -27}
 ```
 
+In addition to the `ok->`, `ok->>`, `success->`, and `success->>` tophat thread macros, there is also the option
+to use `some-ok->`, `some-ok->>`, `some-success->`, and `some-success->>` tophat thread macros that will only
+continue if the responses are `ok` or `success` status codes **AND** the body
+of the responses is `some` (not `nil`).
+
+
+```clojure
+(defn ok-nil-body [& _] (ok nil))
+;; => #'tophat.core/ok-nil-body
+(defn created-nil-body [& _] (created nil))
+;; => #'tophat.core/created-nil-body
+
+(some-ok-> 3 ok-nil-body (lift+ 42))
+;; => {:status 200, :status-text "OK", :body nil}
+(some-ok-> 3 created-nil-body (lift+ 42))
+;; => {:status 201, :status-text "Created", :body nil}
+(some-ok-> 3 ok (lift+ 42))
+;; => {:status 200, :status-text "OK", :body 45}
+(some-ok-> 3 created (lift+ 42)) ;; create status = 201; note the processing short-circuits
+;; => {:status 201, :status-text "Created", :body 3}
+
+(some-success-> 3 created-nil-body (lift+ 42))
+;; => {:status 201, :status-text "Created", :body nil}
+(some-success-> 3 created (lift+ 42)) ;; create status = 201; note the process completes
+;; => {:status 200, :status-text "OK", :body 45}
+```
+
 **Some other things to note about tophat thread macros**
 
 * you may have to define `lifted` functions *outside* of the tophat thread macros
