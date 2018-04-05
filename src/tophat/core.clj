@@ -4,8 +4,8 @@
             [clojure.pprint :refer [pprint]]
             [clojure.string :as str]
             [clojure.walk :as walk]
-            [clojure.xml :as xml]
             [cognitect.transit :as transit]
+            [xander.core :as xander]
             [yaml.core :as yaml])
   (:import (java.io ByteArrayOutputStream StringWriter)))
 
@@ -40,7 +40,7 @@
   (let [s (if (str/starts-with? x "<?")
             (->input-stream x)
             x)]
-    (xml/parse s)))
+    (xander/xml->map s nil true)))
 
 (defn ->yaml
   [m]
@@ -654,7 +654,7 @@
 (defn ->xml-str
   "Converts a Clojure map m to XML string."
   [m]
-  (with-out-str (xml/emit m)))
+  (xander/map->xml m))
 
 (defn ->transit
   "Converts a Clojure map m to transit string."
