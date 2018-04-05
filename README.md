@@ -22,7 +22,7 @@ based on statuses.
 In `project.clj` dependencies:
 
 ```clojure
-[tophat "0.1.4"]
+[tophat "0.1.5"]
 
 ```
 
