@@ -565,9 +565,14 @@ options for `lift-custom`:
   (fn [e options f args] (str "Exception occurred with options: " options ", f " f ", args " args " [" e "]))
 ```
 
+## Change Log
+
+### 0.1.5
+- added `xander` XML convenience library to fix XML conversions in the wrappers
+
 ## License
 
-Copyright © 2017 SierraLogic LLC
+Copyright © 2018 SierraLogic LLC
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
